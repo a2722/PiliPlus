@@ -294,6 +294,10 @@ abstract final class Pref {
 
   static bool get appRcmd =>
       _setting.get(SettingBoxKey.appRcmd, defaultValue: true);
+  
+  /// 启动后前 N 批推荐置空（防沉迷摩擦）
+  static bool get enablePrelaunchBlankRcmd =>
+      _setting.get(SettingBoxKey.enablePrelaunchBlankRcmd, defaultValue: false);
 
   /// 首页推荐来源。新键优先，旧版本只存了 [appRcmd] 布尔值，按原语义映射。
   static RcmdSource get rcmdSource {
