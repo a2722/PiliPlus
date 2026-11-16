@@ -7,11 +7,10 @@ import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
 import 'package:PiliPlus/common/widgets/video_card/video_card_v.dart';
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/pages/rcmd/controller.dart';
+import 'package:PiliPlus/utils/extension/status_bar_to_top.dart';
 import 'package:PiliPlus/utils/grid.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
-import 'package:flutter/widgets.dart'
-    show WidgetsBinding, WidgetsBindingObserver;
 import 'package:get/get.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -23,31 +22,14 @@ class RcmdPage extends StatefulWidget {
 }
 
 class _RcmdPageState extends State<RcmdPage>
-    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
+    with AutomaticKeepAliveClientMixin, StatusBarToTopMixin {
   final controller = Get.put(RcmdController());
 
   @override
   bool get wantKeepAlive => true;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  /// iOS 点击状态栏回到顶部（仅本页）
-  @override
-  void handleStatusBarTap() {
-    if (mounted && controller.scrollController.hasClients) {
-      controller.animateToTop();
-    }
-  }
+  ScrollController get statusBarController => controller.scrollController;
 
   @override
   Widget build(BuildContext context) {
