@@ -36,6 +36,21 @@ List<SettingsModel> get recommendSettings => [
     },
   ),
   SwitchModel(
+    title: '启动后前两次推荐置空',
+    subtitle: '每次启动后前两批推荐的标题、封面和UP主不显示，第3批起恢复',
+    leading: const Icon(Icons.visibility_off_outlined),
+    setKey: SettingBoxKey.enablePrelaunchBlankRcmd,
+    defaultVal: false,
+    onChanged: (value) {
+      try {
+        Get.find<RcmdController>().enablePrelaunchBlankRcmd = value;
+        RcmdController.resetBlankState();
+      } catch (e) {
+        if (kDebugMode) debugPrint('$e');
+      }
+    },
+  ),
+  SwitchModel(
     title: '显示上次看到位置提示',
     subtitle: '保留上次推荐时，在上次刷新位置显示提示',
     leading: const Icon(Icons.tips_and_updates_outlined),
