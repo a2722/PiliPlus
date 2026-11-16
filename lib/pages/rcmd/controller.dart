@@ -1,12 +1,12 @@
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/http/video.dart';
 import 'package:PiliPlus/models/common/rcmd_source.dart';
-import 'package:PiliPlus/models/model_video.dart';
 import 'package:PiliPlus/pages/common/common_controller.dart'
     show RefreshImplMixin;
 import 'package:PiliPlus/pages/common/common_list_controller.dart';
 import 'package:PiliPlus/utils/extension/scroll_controller_ext.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
+import 'package:get/get.dart' show RxBool;
 
 class RcmdController extends CommonListController with RefreshImplMixin {
   late bool enableSaveLastData = Pref.enableSaveLastData;
@@ -14,12 +14,17 @@ class RcmdController extends CommonListController with RefreshImplMixin {
   /// 启动后前 N 批推荐内容置空，可在设置页开关
   late bool enablePrelaunchBlankRcmd = Pref.enablePrelaunchBlankRcmd;
 
+  /// 当前是否处于置空阶段。渲染层据此遮蔽卡片内容，
+  /// 数据本身不做任何修改，因此阶段结束后前几批会一起恢复。
+  late final RxBool blankPhase = RxBool(enablePrelaunchBlankRcmd);
+
   /// 本次进程内还要置空几批；冷启动时类加载重置
   static int _blankRemain = 2;
 
-  /// 供设置页切换开关时立即重置计数
-  static void resetBlankState() {
+  /// 设置页切换开关时重置计数与状态
+  void resetBlankState() {
     _blankRemain = 2;
+    blankPhase.value = enablePrelaunchBlankRcmd;
   }
 
   /// 可在设置页切换后立即生效，无需重启
@@ -73,23 +78,22 @@ class RcmdController extends CommonListController with RefreshImplMixin {
         }
       }
     }
-    _blankIfNeeded(dataList);
+    _updateBlankPhase();
   }
 
-  /// 前 N 批内容抹掉标题、封面和 UP 主名，制造启动摩擦
-  void _blankIfNeeded(List dataList) {
-    if (!enablePrelaunchBlankRcmd || _blankRemain <= 0) {
+  /// 只翻转标志，不改数据。
+  /// 第 1、2 批：blankPhase=true，全部卡片遮蔽；
+  /// 第 3 批：blankPhase=false，连前面几批一起恢复正常。
+  void _updateBlankPhase() {
+    if (!enablePrelaunchBlankRcmd) {
+      blankPhase.value = false;
       return;
     }
-    _blankRemain--;
-    for (final item in dataList) {
-      if (item is BaseSimpleVideoItemModel) {
-        item.title = '';
-        item.cover = null;
-        try {
-          item.owner.name = '';
-        } catch (_) {}
-      }
+    if (_blankRemain > 0) {
+      _blankRemain--;
+      blankPhase.value = true;
+    } else {
+      blankPhase.value = false;
     }
   }
 
