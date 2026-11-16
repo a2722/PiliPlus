@@ -10,6 +10,8 @@ import 'package:PiliPlus/pages/rcmd/controller.dart';
 import 'package:PiliPlus/utils/grid.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
+import 'package:flutter/widgets.dart'
+    show WidgetsBinding, WidgetsBindingObserver;
 import 'package:get/get.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -21,11 +23,31 @@ class RcmdPage extends StatefulWidget {
 }
 
 class _RcmdPageState extends State<RcmdPage>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   final controller = Get.put(RcmdController());
 
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// iOS 点击状态栏回到顶部（仅本页）
+  @override
+  void handleStatusBarTap() {
+    if (mounted && controller.scrollController.hasClients) {
+      controller.animateToTop();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
