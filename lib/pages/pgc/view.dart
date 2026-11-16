@@ -15,6 +15,7 @@ import 'package:PiliPlus/models_new/fav/fav_pgc/list.dart';
 import 'package:PiliPlus/models_new/pgc/pgc_index_result/list.dart';
 import 'package:PiliPlus/models_new/pgc/pgc_timeline/result.dart';
 import 'package:PiliPlus/pages/pgc/controller.dart';
+import 'package:PiliPlus/utils/extension/status_bar_to_top.dart';
 import 'package:PiliPlus/pages/pgc/widgets/pgc_card_v.dart';
 import 'package:PiliPlus/pages/pgc/widgets/pgc_card_v_timeline.dart';
 import 'package:PiliPlus/pages/pgc_index/controller.dart';
@@ -36,7 +37,8 @@ class PgcPage extends StatefulWidget {
   State<PgcPage> createState() => _PgcPageState();
 }
 
-class _PgcPageState extends State<PgcPage> with AutomaticKeepAliveClientMixin {
+class _PgcPageState extends State<PgcPage>
+    with AutomaticKeepAliveClientMixin, StatusBarToTopMixin {
   late final PgcController controller;
 
   @override
@@ -50,6 +52,9 @@ class _PgcPageState extends State<PgcPage> with AutomaticKeepAliveClientMixin {
 
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  get statusBarController => controller.scrollController;
 
   @override
   Widget build(BuildContext context) {
