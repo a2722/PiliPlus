@@ -50,6 +50,7 @@ abstract final class SettingBoxKey {
       appRcmd = 'appRcmd',
       rcmdSource = 'rcmdSource',
       enableSaveLastData = 'enableSaveLastData',
+      enablePrelaunchBlankRcmd = 'enablePrelaunchBlankRcmd',
       minDurationForRcmd = 'minDurationForRcmd',
       minPlayForRcmd = 'minPlayForRcmd',
       minLikeRatioForRecommend = 'minLikeRatioForRecommend',
