@@ -1,6 +1,7 @@
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/http/video.dart';
 import 'package:PiliPlus/models/common/rcmd_source.dart';
+import 'package:PiliPlus/models/model_video.dart';
 import 'package:PiliPlus/pages/common/common_controller.dart'
     show RefreshImplMixin;
 import 'package:PiliPlus/pages/common/common_list_controller.dart';
@@ -9,6 +10,17 @@ import 'package:PiliPlus/utils/storage_pref.dart';
 
 class RcmdController extends CommonListController with RefreshImplMixin {
   late bool enableSaveLastData = Pref.enableSaveLastData;
+
+  /// 启动后前 N 批推荐内容置空，可在设置页开关
+  late bool enablePrelaunchBlankRcmd = Pref.enablePrelaunchBlankRcmd;
+
+  /// 本次进程内还要置空几批；冷启动时类加载重置
+  static int _blankRemain = 2;
+
+  /// 供设置页切换开关时立即重置计数
+  static void resetBlankState() {
+    _blankRemain = 2;
+  }
 
   /// 可在设置页切换后立即生效，无需重启
   RcmdSource rcmdSource = Pref.rcmdSource;
@@ -59,6 +71,24 @@ class RcmdController extends CommonListController with RefreshImplMixin {
             dataList.addAll(response);
           }
         }
+      }
+    }
+    _blankIfNeeded(dataList);
+  }
+
+  /// 前 N 批内容抹掉标题、封面和 UP 主名，制造启动摩擦
+  void _blankIfNeeded(List dataList) {
+    if (!enablePrelaunchBlankRcmd || _blankRemain <= 0) {
+      return;
+    }
+    _blankRemain--;
+    for (final item in dataList) {
+      if (item is BaseSimpleVideoItemModel) {
+        item.title = '';
+        item.cover = null;
+        try {
+          item.owner.name = '';
+        } catch (_) {}
       }
     }
   }
