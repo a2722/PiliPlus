@@ -1,6 +1,7 @@
 import 'package:PiliPlus/common/widgets/flutter/vertical_tabs.dart';
 import 'package:PiliPlus/models/common/rank_type.dart';
 import 'package:PiliPlus/pages/rank/controller.dart';
+import 'package:PiliPlus/utils/extension/status_bar_to_top.dart';
 import 'package:PiliPlus/pages/rank/zone/view.dart';
 import 'package:get/get.dart';
 import 'package:material_ui/material_ui.dart';
@@ -13,11 +14,14 @@ class RankPage extends StatefulWidget {
 }
 
 class _RankPageState extends State<RankPage>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, StatusBarToTopMixin {
   final RankController _rankController = Get.put(RankController());
 
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  get statusBarController => _rankController.scrollController;
 
   @override
   Widget build(BuildContext context) {
