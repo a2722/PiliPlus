@@ -43,8 +43,9 @@ List<SettingsModel> get recommendSettings => [
     defaultVal: false,
     onChanged: (value) {
       try {
-        Get.find<RcmdController>().enablePrelaunchBlankRcmd = value;
-        RcmdController.resetBlankState();
+        Get.find<RcmdController>()
+          ..enablePrelaunchBlankRcmd = value
+          ..resetBlankState();
       } catch (e) {
         if (kDebugMode) debugPrint('$e');
       }
