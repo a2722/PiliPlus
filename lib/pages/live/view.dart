@@ -12,6 +12,7 @@ import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/models_new/live/live_feed_index/card_data_list_item.dart';
 import 'package:PiliPlus/models_new/live/live_feed_index/card_list.dart';
 import 'package:PiliPlus/pages/live/controller.dart';
+import 'package:PiliPlus/utils/extension/status_bar_to_top.dart';
 import 'package:PiliPlus/pages/live/widgets/live_item_app.dart';
 import 'package:PiliPlus/pages/live/widgets/sliver_pinned_header.dart';
 import 'package:PiliPlus/pages/live_area/view.dart';
@@ -34,13 +35,16 @@ class LivePage extends StatefulWidget {
 }
 
 class _LivePageState extends State<LivePage>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, StatusBarToTopMixin {
   final LiveController controller = Get.put(LiveController());
   late TextScaler textScaler;
   late ColorScheme colorScheme;
 
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  get statusBarController => controller.scrollController;
 
   @override
   void didChangeDependencies() {
