@@ -9,6 +9,7 @@ import 'package:PiliPlus/models/common/home_tab_type.dart';
 import 'package:PiliPlus/models/model_hot_video_item.dart';
 import 'package:PiliPlus/pages/home/controller.dart';
 import 'package:PiliPlus/pages/hot/controller.dart';
+import 'package:PiliPlus/utils/extension/status_bar_to_top.dart';
 import 'package:PiliPlus/pages/rank/view.dart';
 import 'package:PiliPlus/utils/grid.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
@@ -23,11 +24,14 @@ class HotPage extends StatefulWidget {
 }
 
 class _HotPageState extends State<HotPage>
-    with AutomaticKeepAliveClientMixin, GridMixin {
+    with AutomaticKeepAliveClientMixin, GridMixin, StatusBarToTopMixin {
   final HotController controller = Get.put(HotController());
 
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  get statusBarController => controller.scrollController;
 
   Widget _buildEntranceItem({
     required String iconUrl,
