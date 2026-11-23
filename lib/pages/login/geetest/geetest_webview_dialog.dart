@@ -8,6 +8,10 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
 import 'package:material_ui/material_ui.dart';
 
+/// 极验 v4（gcaptcha4）验证码弹窗。
+///
+/// B 站自 2026-11 起 /x/safecenter/captcha/pre 返回 recaptcha_type=geetest4，
+/// gee_gt 即 v4 的 captchaId；旧的 v3 fullpage 加载器已无法加载该配置。
 class GeetestWebviewDialog extends StatefulWidget {
   const GeetestWebviewDialog(this.gt, this.challenge, {super.key});
 
@@ -26,43 +30,60 @@ class GeetestWebviewDialog extends StatefulWidget {
 }
 
 class _GeetestWebviewDialogState extends State<GeetestWebviewDialog> {
-  static const _geetestJsUri =
-      'https://static.geetest.com/static/js/fullpage.0.0.0.js';
-  static const _geetestConfigUri = 'https://api.geetest.com/gettype.php';
+  static const _gt4JsUri = 'https://static.geetest.com/v4/gt4.js';
 
-  static String _buildHtml(String gt, String challenge) {
-    final ts = DateTime.now().millisecondsSinceEpoch;
-    final js =
-        'var C,S,T,t;'
-        'T=()=>{if(C&&S&&!t){t=Geetest(C).onSuccess(()=>R("success",t.getValidate())).onError(o=>R("error",o)).onClose(o=>R("close",o));t.onReady(()=>t.verify())}};'
-        'geetest_$ts=(d)=>{'
-        'if(!d||d.status!="success"){R("error",JSON.stringify(d));return};'
-        'C=Object.assign({gt:"$gt",challenge:"$challenge",offline:false,new_captcha:true,product:"bind",width:"100%",https:true,protocol:"https://"},d.data);T()'
-        '};'
-        'G=()=>{S=1;T()};'
-        'E=()=>{document.getElementById("E").textContent="验证码加载失败";R("error","geetest script load failed")}';
-
-    return '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width"></head>'
-        '<style>#E{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:red}</style>'
-        '<body><div id="E"></div>'
-        '<script>'
-        '${Platform.isLinux ? "R=(n,o)=>window.PiliPlus.postMessage(n+':'+JSON.stringify(o))" : "R=(n,o)=>window.flutter_inappwebview?.callHandler(n,o)"};$js'
+  static String _buildHtml(String gt) {
+    final bridge = Platform.isLinux
+        ? 'R=(n,o)=>window.PiliPlus.postMessage(n+":"+JSON.stringify(o))'
+        : 'R=(n,o)=>window.flutter_inappwebview?.callHandler(n,o)';
+    return '<!DOCTYPE html><html><head>'
+        '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">'
+        '</head>'
+        '<style>'
+        'html,body{margin:0;padding:0;background:transparent;overflow:hidden}'
+        '#cap{width:100%;min-height:320px;display:flex;align-items:center;justify-content:center}'
+        '#E{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;'
+        'color:#e63946;font-size:14px;padding:16px;text-align:center}'
+        '</style>'
+        '<body><div id="cap"></div><div id="E"></div><script>'
+        '$bridge;'
+        'function boot(){'
+        '  if(typeof initGeetest4!=="function"){'
+        '    document.getElementById("E").textContent="验证码脚本加载失败";'
+        '    R("error","gt4.js not loaded");return;'
+        '  }'
+        '  initGeetest4({'
+        '    captchaId:"$gt",'
+        '    product:"bind",'
+        '    protocol:"https://",'
+        '    language:"zho",'
+        '    hideBar:[]'
+        '  },function(c){'
+        '    c.appendTo("#cap");'
+        '    c.onSuccess(function(){'
+        '      try{ R("success", c.getValidate()) }catch(e){ R("error", String(e)) }'
+        '    });'
+        '    c.onError(function(e){ R("error", JSON.stringify(e||{})) });'
+        '    c.onClose(function(){ R("close",{}) });'
+        '    c.showCaptcha();'
+        '  });'
+        '}'
         '</script>'
-        '<script src="$_geetestJsUri" onload="G()" onerror="E()"></script>'
-        '<script src="$_geetestConfigUri?gt=$gt&callback=geetest_$ts" onerror="E()"></script>'
+        '<script src="$_gt4JsUri" onload="boot()" '
+        'onerror="document.getElementById(\'E\').textContent=\'验证码脚本加载失败\'"></script>'
         '</body></html>';
   }
 
   @override
   Widget build(BuildContext context) {
-    final html = _buildHtml(widget.gt, widget.challenge);
+    final html = _buildHtml(widget.gt);
 
     if (Platform.isLinux) {
       return AlertDialog(
         title: const Text('验证码'),
         content: SizedBox(
-          width: 300,
-          height: 400,
+          width: 320,
+          height: 420,
           child: LinuxWebview(
             initialHtml: html,
             userAgent: BrowserUa.mob,
@@ -113,7 +134,7 @@ class _GeetestWebviewDialogState extends State<GeetestWebviewDialog> {
             saveFormData: false,
             safeBrowsingEnabled: false,
             isFraudulentWebsiteWarningEnabled: false,
-            domStorageEnabled: false,
+            domStorageEnabled: true,
             databaseEnabled: false,
             cacheEnabled: false,
             cacheMode: .LOAD_NO_CACHE,
@@ -122,7 +143,7 @@ class _GeetestWebviewDialogState extends State<GeetestWebviewDialog> {
             verticalScrollBarEnabled: false,
             overScrollMode: .NEVER,
 
-            pageZoom: Platform.isIOS ? 3 : 1,
+            pageZoom: Platform.isIOS ? 2 : 1,
           ),
           initialData: InAppWebViewInitialData(data: html),
           onWebViewCreated: (ctr) {
