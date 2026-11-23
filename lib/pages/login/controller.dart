@@ -165,23 +165,31 @@ class LoginPageController extends GetxController
         session.challenge,
       );
       if (res == null || isClosed) return;
-      final validate = res['geetest_validate'];
-      final seccode = res['geetest_seccode'];
-      final challenge = res['geetest_challenge'];
-      if (validate is! String ||
-          validate.isEmpty ||
-          seccode is! String ||
-          seccode.isEmpty ||
-          challenge is! String ||
-          challenge.isEmpty) {
+      // 极验 v4：{lot_number, captcha_output, pass_token, gen_time}
+      final lotNumber = res['lot_number'];
+      final captchaOutput = res['captcha_output'];
+      final passToken = res['pass_token'];
+      final genTime = res['gen_time'];
+      if (lotNumber is! String ||
+          lotNumber.isEmpty ||
+          captchaOutput is! String ||
+          captchaOutput.isEmpty ||
+          passToken is! String ||
+          passToken.isEmpty ||
+          genTime is! String ||
+          genTime.isEmpty) {
         SmartDialog.showToast('验证结果不完整，请重试');
         return;
       }
       captchaData
         ..token = session.token
-        ..validate = validate
-        ..seccode = seccode
-        ..geetest = GeetestData(challenge: challenge, gt: session.gt);
+        ..lotNumber = lotNumber
+        ..captchaOutput = captchaOutput
+        ..passToken = passToken
+        ..genTime = genTime
+        ..validate = lotNumber
+        ..seccode = captchaOutput
+        ..geetest = GeetestData(challenge: session.challenge, gt: session.gt);
       succeeded = true;
       SmartDialog.showToast('验证成功');
     } catch (_) {
@@ -277,6 +285,10 @@ class LoginPageController extends GetxController
       geeSeccode: captchaData.seccode,
       geeChallenge: captchaData.geetest?.challenge,
       recaptchaToken: captchaData.token,
+      lotNumber: captchaData.lotNumber,
+      captchaOutput: captchaData.captchaOutput,
+      passToken: captchaData.passToken,
+      genTime: captchaData.genTime,
     );
     if (res['status']) {
       final data = res['data'];
@@ -382,6 +394,10 @@ class LoginPageController extends GetxController
                             geeSeccode: captchaData.seccode,
                             geeValidate: captchaData.validate,
                             recaptchaToken: captchaData.token,
+                            lotNumber: captchaData.lotNumber,
+                            captchaOutput: captchaData.captchaOutput,
+                            passToken: captchaData.passToken,
+                            genTime: captchaData.genTime,
                             refererUrl: url,
                           );
                       if (!safeCenterSendSmsCodeRes['status']) {
@@ -598,6 +614,10 @@ class LoginPageController extends GetxController
       geeSeccode: captchaData.seccode,
       geeChallenge: captchaData.geetest?.challenge,
       recaptchaToken: captchaData.token,
+      lotNumber: captchaData.lotNumber,
+      captchaOutput: captchaData.captchaOutput,
+      passToken: captchaData.passToken,
+      genTime: captchaData.genTime,
     );
     if (res['status']) {
       SmartDialog.showToast('发送成功');
