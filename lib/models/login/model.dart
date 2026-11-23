@@ -6,14 +6,26 @@ class CaptchaDataModel {
     this.tencent,
     this.validate,
     this.seccode,
+    this.lotNumber,
+    this.captchaOutput,
+    this.passToken,
+    this.genTime,
   });
 
   String? type;
   String? token;
   GeetestData? geetest;
   Tencent? tencent;
+
+  /// 极验 v3
   String? validate;
   String? seccode;
+
+  /// 极验 v4（B 站 2026-11 起 safecenter 返回 recaptcha_type=geetest4）
+  String? lotNumber;
+  String? captchaOutput;
+  String? passToken;
+  String? genTime;
 
   CaptchaDataModel.fromJson(Map<String, dynamic> json) {
     type = json["type"];
