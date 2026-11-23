@@ -206,6 +206,10 @@ abstract final class LoginHttp {
     String? geeSeccode,
     String? geeValidate,
     String? recaptchaToken,
+    String? lotNumber,
+    String? captchaOutput,
+    String? passToken,
+    String? genTime,
   }) async {
     dynamic publicKey = RSAKeyParser().parse(key);
     String passwordEncrypted = Encrypter(
