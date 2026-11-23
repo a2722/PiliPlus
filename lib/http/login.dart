@@ -100,6 +100,10 @@ abstract final class LoginHttp {
     String? geeSeccode,
     String? geeValidate,
     String? recaptchaToken,
+    String? lotNumber,
+    String? captchaOutput,
+    String? passToken,
+    String? genTime,
   }) async {
     int timestamp = DateTime.now().millisecondsSinceEpoch;
     final data = {
@@ -113,6 +117,10 @@ abstract final class LoginHttp {
       'gee_challenge': ?geeChallenge,
       'gee_seccode': ?geeSeccode,
       'gee_validate': ?geeValidate,
+      'lot_number': ?lotNumber,
+      'captcha_output': ?captchaOutput,
+      'pass_token': ?passToken,
+      'gen_time': ?genTime,
       'local_id': _buvid,
       // https://chinggg.github.io/post/appre/
       'login_session_id': md5
@@ -226,6 +234,10 @@ abstract final class LoginHttp {
       'gee_challenge': ?geeChallenge,
       'gee_seccode': ?geeSeccode,
       'gee_validate': ?geeValidate,
+      'lot_number': ?lotNumber,
+      'captcha_output': ?captchaOutput,
+      'pass_token': ?passToken,
+      'gen_time': ?genTime,
       'local_id': _buvid, //LoginUtils.generateBuvid(),
       'mobi_app': 'android_hd',
       'password': passwordEncrypted,
@@ -389,6 +401,10 @@ abstract final class LoginHttp {
     String? geeSeccode,
     String? geeValidate,
     String? recaptchaToken,
+    String? lotNumber,
+    String? captchaOutput,
+    String? passToken,
+    String? genTime,
     required String refererUrl,
   }) async {
     Map<String, String> data = {
@@ -399,6 +415,10 @@ abstract final class LoginHttp {
       'gee_seccode': ?geeSeccode,
       'gee_validate': ?geeValidate,
       'recaptcha_token': ?recaptchaToken,
+      'lot_number': ?lotNumber,
+      'captcha_output': ?captchaOutput,
+      'pass_token': ?passToken,
+      'gen_time': ?genTime,
     };
     AppSign.appSign(data);
     final res = await Request().post(
