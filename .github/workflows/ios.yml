@@ -36,7 +36,14 @@ jobs:
 
       - name: Build iOS
         run: |
-          flutter build ios --release --no-codesign --dart-define-from-file=pili_release.json --no-pub
+          set -o pipefail
+          if ! flutter build ios --release --no-codesign --dart-define-from-file=pili_release.json --no-pub -v > /tmp/fb.log 2>&1; then
+            echo "===== BUILD FAILED: error lines ====="
+            grep -niE "error:|error \(|failed|✗|undefined|not found|Unable to|cannot|Command .* failed" /tmp/fb.log | tail -80
+            echo "===== TAIL 150 ====="
+            tail -150 /tmp/fb.log
+            exit 1
+          fi
           ln -sf ./build/ios/iphoneos Payload
           # make AltSign happy...
           find Payload/Runner.app/Frameworks -type d -name "*.framework" -exec codesign --force --sign - --preserve-metadata=identifier,entitlements {} \;
