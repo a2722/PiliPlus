@@ -9,6 +9,7 @@ import 'package:PiliPlus/models_new/login_devices/data.dart';
 import 'package:PiliPlus/utils/accounts.dart';
 import 'package:PiliPlus/utils/accounts/account.dart';
 import 'package:PiliPlus/utils/app_sign.dart';
+import 'package:PiliPlus/utils/login_debug.dart';
 import 'package:PiliPlus/utils/login_utils.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:crypto/crypto.dart';
@@ -29,6 +30,22 @@ abstract final class LoginHttp {
     'bili-http-engine': 'cronet',
     'content-type': 'application/x-www-form-urlencoded; charset=utf-8',
   };
+
+  /// 登录链路请求日志：脱敏后记录真正发出去的参数。
+  static void _logReq(String name, String uri, Map<String, dynamic> params) {
+    loginLog('$name.req', <String, dynamic>{
+      'uri': uri,
+      'params': maskLoginParams(params),
+    });
+  }
+
+  /// 登录链路响应日志：保留原始 body，风控/验证码问题全靠它定位。
+  static void _logRes(String name, Response res) {
+    loginLog('$name.res', <String, dynamic>{
+      'http': res.statusCode,
+      'body': res.data,
+    });
+  }
 
   @pragma('vm:notify-debugger-on-exception')
   static Future<LoadingState<({String authCode, String url})>>
@@ -84,6 +101,7 @@ abstract final class LoginHttp {
   // 获取salt与PubKey
   static Future getWebKey() async {
     final res = await Request().get(Api.getWebKey);
+    _logRes('getWebKey', res);
     //data: {'disable_rcmd': 0, 'local_id': LoginUtils.generateBuvid()});
     if (res.data['code'] == 0) {
       return {'status': true, 'data': res.data['data']};
@@ -253,6 +271,7 @@ abstract final class LoginHttp {
       'username': username,
     };
     AppSign.appSign(data);
+    _logReq('loginByPwd', Api.loginByPwdApi, data);
     final res = await Request().post(
       Api.loginByPwdApi,
       data: data,
@@ -262,6 +281,7 @@ abstract final class LoginHttp {
         //responseType: ResponseType.plain
       ),
     );
+    _logRes('loginByPwd', res);
 
     if (res.data['code'] == 0) {
       return {
@@ -319,6 +339,7 @@ abstract final class LoginHttp {
       'tel': tel,
     };
     AppSign.appSign(data);
+    _logReq('loginBySms', Api.logInByAppSms, data);
     final res = await Request().post(
       Api.logInByAppSms,
       data: data,
@@ -328,6 +349,7 @@ abstract final class LoginHttp {
         //responseType: ResponseType.plain
       ),
     );
+    _logRes('loginBySms', res);
 
     if (res.data['code'] == 0) {
       return {'status': true, 'data': res.data['data']};
@@ -345,12 +367,13 @@ abstract final class LoginHttp {
   static Future safeCenterGetInfo({
     required String tmpCode,
   }) async {
+    final Map<String, dynamic> params = {'tmp_code': tmpCode};
+    _logReq('safeCenterGetInfo', Api.safeCenterGetInfo, params);
     final res = await Request().get(
       Api.safeCenterGetInfo,
-      queryParameters: {
-        'tmp_code': tmpCode,
-      },
+      queryParameters: params,
     );
+    _logRes('safeCenterGetInfo', res);
     if (res.data['code'] == 0) {
       return {'status': true, 'data': res.data['data']};
     } else {
@@ -383,7 +406,9 @@ abstract final class LoginHttp {
 
   // 风控验证手机前的极验验证码
   static Future preCapture() async {
+    loginLog('preCapture.req', 'no params');
     final res = await Request().post(Api.preCapture);
+    _logRes('preCapture', res);
 
     if (res.data['code'] == 0) {
       return {'status': true, 'data': res.data['data']};
@@ -425,6 +450,7 @@ abstract final class LoginHttp {
       'gen_time': ?genTime,
     };
     AppSign.appSign(data);
+    _logReq('safeCenterSmsCode', Api.safeCenterSmsCode, data);
     final res = await Request().post(
       Api.safeCenterSmsCode,
       data: data,
@@ -435,6 +461,7 @@ abstract final class LoginHttp {
         },
       ),
     );
+    _logRes('safeCenterSmsCode', res);
 
     if (res.data['code'] == 0) {
       return {'status': true, 'data': res.data['data']};
@@ -467,6 +494,7 @@ abstract final class LoginHttp {
       'captcha_key': captchaKey,
     };
     AppSign.appSign(data);
+    _logReq('safeCenterSmsVerify', Api.safeCenterSmsVerify, data);
     final res = await Request().post(
       Api.safeCenterSmsVerify,
       data: data,
@@ -477,6 +505,7 @@ abstract final class LoginHttp {
         },
       ),
     );
+    _logRes('safeCenterSmsVerify', res);
 
     if (res.data['code'] == 0) {
       return {'status': true, 'data': res.data['data']};
@@ -513,6 +542,7 @@ abstract final class LoginHttp {
       // 'statistics': Constants.statistics,
     };
     AppSign.appSign(data);
+    _logReq('oauth2AccessToken', Api.oauth2AccessToken, data);
     final res = await Request().post(
       Api.oauth2AccessToken,
       data: data,
@@ -521,6 +551,7 @@ abstract final class LoginHttp {
         headers: headers,
       ),
     );
+    _logRes('oauth2AccessToken', res);
 
     if (res.data['code'] == 0) {
       return {'status': true, 'data': res.data['data']};

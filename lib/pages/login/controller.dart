@@ -13,6 +13,7 @@ import 'package:PiliPlus/models/login/model.dart';
 import 'package:PiliPlus/pages/login/geetest/geetest_webview_dialog.dart';
 import 'package:PiliPlus/utils/accounts.dart';
 import 'package:PiliPlus/utils/accounts/account.dart';
+import 'package:PiliPlus/utils/login_debug.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/theme_utils.dart';
 import 'package:dio/dio.dart';
@@ -129,6 +130,13 @@ class LoginPageController extends GetxController
     if (_isVerifyingCaptcha || isClosed) return;
     _isVerifyingCaptcha = true;
     var succeeded = false;
+    loginLog('captcha.start', <String, dynamic>{
+      'gt': geeGt,
+      'challenge': maskValue(geeChallenge),
+      'token': maskValue(captchaData.token),
+      'canRefreshRegistration': canRefreshRegistration,
+      'isIOS': Platform.isIOS,
+    });
     try {
       captchaData
         ..validate = null
@@ -154,16 +162,22 @@ class LoginPageController extends GetxController
         );
         if (isClosed) return;
         if (resolved == null) {
+          loginLog('captcha.resolveFailed', 'preCapture 未返回可用的极验配置');
           SmartDialog.showToast('验证码服务暂时不可用，请稍后重试或使用扫码登录');
           return;
         }
         session = resolved;
+        loginLog('captcha.resolved', <String, dynamic>{
+          'gt': resolved.gt,
+          'challenge': maskValue(resolved.challenge),
+        });
       }
 
       final res = await GeetestWebviewDialog.geetest(
         session.gt,
         session.challenge,
       );
+      loginLog('captcha.dialogResult', res == null ? 'null / closed' : res);
       if (res == null || isClosed) return;
       // 极验 v4：{lot_number, captcha_output, pass_token, gen_time}
       final lotNumber = res['lot_number'];
@@ -178,6 +192,7 @@ class LoginPageController extends GetxController
           passToken.isEmpty ||
           genTime is! String ||
           genTime.isEmpty) {
+        loginLog('captcha.invalid', res);
         SmartDialog.showToast('验证结果不完整，请重试');
         return;
       }
@@ -191,8 +206,15 @@ class LoginPageController extends GetxController
         ..seccode = captchaOutput
         ..geetest = GeetestData(challenge: session.challenge, gt: session.gt);
       succeeded = true;
+      loginLog('captcha.ok', <String, dynamic>{
+        'lotNumber': lotNumber,
+        'captchaOutput': captchaOutput,
+        'passToken': maskValue(passToken),
+        'genTime': genTime,
+      });
       SmartDialog.showToast('验证成功');
-    } catch (_) {
+    } catch (e, s) {
+      loginLog('captcha.exception', '$e\n$s');
       if (!isClosed) {
         SmartDialog.showToast('加载验证码失败，请稍后重试或使用扫码登录');
       }
@@ -269,8 +291,21 @@ class LoginPageController extends GetxController
       return;
     }
     // if ((passwordFormKey.currentState as FormState).validate()) {
+    loginLog('loginByPassword.start', <String, dynamic>{
+      'user': maskValue(username),
+      'pwdLen': password.length,
+      'geeChallenge': captchaData.geetest?.challenge,
+      'geeValidate': captchaData.validate,
+      'geeSeccode': captchaData.seccode,
+      'recaptchaToken': maskValue(captchaData.token),
+      'lotNumber': captchaData.lotNumber,
+      'captchaOutput': captchaData.captchaOutput,
+      'passToken': maskValue(captchaData.passToken),
+      'genTime': captchaData.genTime,
+    });
     final webKeyRes = await LoginHttp.getWebKey();
     if (!webKeyRes['status']) {
+      loginLog('loginByPassword.webKeyFailed', webKeyRes);
       SmartDialog.showToast(webKeyRes['msg']);
       return;
     }
@@ -290,14 +325,46 @@ class LoginPageController extends GetxController
       passToken: captchaData.passToken,
       genTime: captchaData.genTime,
     );
+    loginLog('loginByPassword.result', res);
     if (res['status']) {
       final data = res['data'];
       if (data == null) {
+        loginLog('loginByPassword.emptyData', res['msg']);
         SmartDialog.showToast('登录异常，接口未返回数据：${res["msg"]}');
         return;
       }
+      // 服务端风控二次验证：B 站 2026-11 起出现 status=1 + scene=secLogin 形态，
+      // URL 里没有 request_id/source，不能复用下面 status=2 的安全中心流程。
+      // 这里先把现场信息完整落日志，后续按日志补齐该分支。
+      if (data['status'] == 1) {
+        String? riskUrl;
+        Map<String, String> riskQuery = const <String, String>{};
+        try {
+          final dynamic rawUrl = data['url'];
+          if (rawUrl is String && rawUrl.isNotEmpty) {
+            riskUrl = rawUrl;
+            riskQuery = Uri.parse(rawUrl).queryParameters;
+          }
+        } catch (e) {
+          loginLog('loginByPassword.riskVerify.parseFailed', '$e');
+        }
+        loginLog('loginByPassword.riskVerify.unhandled', <String, dynamic>{
+          'note': '服务端要求身份验证（scene=secLogin），当前未实现该分支',
+          'message': data['message'],
+          'url': riskUrl,
+          'query': riskQuery,
+          'hasTmpToken': riskQuery.containsKey('tmp_token'),
+          'hasRequestId': riskQuery.containsKey('request_id'),
+          'hasSource': riskQuery.containsKey('source'),
+          'gourl': riskQuery['gourl'],
+        });
+      }
       if (data['status'] == 2) {
         SmartDialog.showToast(data['message']);
+        loginLog('loginByPassword.riskVerify.safeCenter', <String, dynamic>{
+          'message': data['message'],
+          'url': data['url'],
+        });
         // return;
         //{"code":0,"message":"0","ttl":1,"data":{"status":2,"message":"本次登录环境存在风险, 需使用手机号进行验证或绑定","url":"https://passport.bilibili.com/h5-app/passport/risk/verify?tmp_token=9e785433940891dfa78f033fb7928181&request_id=e5a6d6480df04097870be56c6e60f7ef&source=risk","token_info":null,"cookie_info":null,"sso":null,"is_new":false,"is_tourist":false}}
         String url = data['url']!;
@@ -483,11 +550,22 @@ class LoginPageController extends GetxController
         return;
       }
       if (data['token_info'] == null || data['cookie_info'] == null) {
+        loginLog('loginByPassword.noIdentity', <String, dynamic>{
+          'status': data['status'],
+          'message': data['message'],
+          'msg': res['msg'],
+          'data': data,
+        });
         SmartDialog.showToast(
-          '登录异常，接口未返回身份信息，可能是因为账号风控，请尝试其它登录方式。\n${res["msg"]}，\n $data',
+          '登录异常，接口未返回身份信息，可能是因为账号风控，请尝试其它登录方式。\n'
+          '（详细响应已写入日志：设置 - 日志）\n${res["msg"]}，\n $data',
         );
         return;
       }
+      loginLog('loginByPassword.success', <String, dynamic>{
+        'hasTokenInfo': true,
+        'cookieCount': (data['cookie_info']['cookies'] as List).length,
+      });
       SmartDialog.showToast('正在保存身份信息');
       TextInput.finishAutofillContext();
       await setAccount(data['token_info'], data['cookie_info']['cookies']);
@@ -499,6 +577,7 @@ class LoginPageController extends GetxController
           // login success
           break;
         case -105:
+          loginLog('loginByPassword.captchaRequired', res);
           String captureUrl = res['data']['url'];
           Uri captureUri = Uri.parse(captureUrl);
           captchaData.token = captureUri.queryParameters['recaptcha_token']!;
@@ -508,6 +587,7 @@ class LoginPageController extends GetxController
           getCaptcha(geeGt, geeChallenge, loginByPassword);
           break;
         default:
+          loginLog('loginByPassword.failed', res);
           SmartDialog.showToast(res['msg']);
           // login failed
           break;
@@ -537,6 +617,7 @@ class LoginPageController extends GetxController
     }
     final webKeyRes = await LoginHttp.getWebKey();
     if (!webKeyRes['status']) {
+      loginLog('loginBySmsCode.webKeyFailed', webKeyRes);
       SmartDialog.showToast(webKeyRes['msg']);
       return;
     }
@@ -548,6 +629,7 @@ class LoginPageController extends GetxController
       cid: selectedCountryCodeId.countryId,
       key: key,
     );
+    loginLog('loginBySmsCode.result', res);
     if (res['status']) {
       SmartDialog.showToast('登录成功');
       final data = res['data'];

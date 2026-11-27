@@ -4,6 +4,7 @@ import 'dart:io' show Platform;
 import 'package:PiliPlus/http/browser_ua.dart';
 import 'package:PiliPlus/main.dart';
 import 'package:PiliPlus/plugin/linux_webview.dart';
+import 'package:PiliPlus/utils/login_debug.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
 import 'package:material_ui/material_ui.dart';
@@ -47,10 +48,13 @@ class _GeetestWebviewDialogState extends State<GeetestWebviewDialog> {
         '</style>'
         '<body><div id="cap"></div><div id="E"></div><script>'
         '$bridge;'
+        'window.onerror=function(m,s,l,c,e){'
+        'R("jserror",String(m)+" @ "+l+":"+c);return false;};'
         'function boot(){'
+        '  R("log","gt4.js loaded, captchaId=$gt");'
         '  if(typeof initGeetest4!=="function"){'
         '    document.getElementById("E").textContent="验证码脚本加载失败";'
-        '    R("error","gt4.js not loaded");return;'
+        '    R("jserror","initGeetest4 missing");return;'
         '  }'
         '  initGeetest4({'
         '    captchaId:"$gt",'
@@ -77,6 +81,10 @@ class _GeetestWebviewDialogState extends State<GeetestWebviewDialog> {
   @override
   Widget build(BuildContext context) {
     final html = _buildHtml(widget.gt);
+    loginLog('geetest.open', <String, dynamic>{
+      'gt': widget.gt,
+      'challenge': maskValue(widget.challenge),
+    });
 
     if (Platform.isLinux) {
       return AlertDialog(
@@ -94,12 +102,19 @@ class _GeetestWebviewDialogState extends State<GeetestWebviewDialog> {
                 final dataStr = msgStr.substring("success:".length);
                 try {
                   final data = jsonDecode(dataStr);
+                  loginLog('geetest.success', data);
                   Get.back(result: data);
                 } catch (e) {
+                  loginLog('geetest.decodeError', '$e / $dataStr');
                   debugPrint('geetest decode error: $e');
                 }
               } else if (msgStr.startsWith("error:")) {
+                loginLog('geetest.error', msgStr);
                 debugPrint('geetest error: $msgStr');
+              } else if (msgStr.startsWith("jserror:")) {
+                loginLog('geetest.jsError', msgStr);
+              } else if (msgStr.startsWith("log:")) {
+                loginLog('geetest.js', msgStr);
               } else if (msgStr.startsWith('close:')) {
                 Get.back();
               }
@@ -153,25 +168,38 @@ class _GeetestWebviewDialogState extends State<GeetestWebviewDialog> {
                 callback: (args) {
                   if (args.isNotEmpty) {
                     if (args[0] case Map<String, dynamic> data) {
+                      loginLog('geetest.success', data);
                       Get.back(result: data);
                       return;
                     }
                   }
+                  loginLog('geetest.invalidResult', args);
                   debugPrint('geetest invalid result: $args');
                 },
               )
               ..addJavaScriptHandler(
                 handlerName: 'error',
                 callback: (args) {
+                  loginLog('geetest.error', args);
                   debugPrint('geetest error: $args');
+                },
+              )
+              ..addJavaScriptHandler(
+                handlerName: 'jserror',
+                callback: (args) {
+                  loginLog('geetest.jsError', args);
+                },
+              )
+              ..addJavaScriptHandler(
+                handlerName: 'log',
+                callback: (args) {
+                  loginLog('geetest.js', args);
                 },
               )
               ..addJavaScriptHandler(
                 handlerName: 'close',
                 callback: (args) => Get.back(),
-              );
-          },
-        ),
+              ),
         Positioned(
           left: 8,
           top: 8,
