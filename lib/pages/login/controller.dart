@@ -11,6 +11,7 @@ import 'package:PiliPlus/models/common/account_type.dart';
 import 'package:PiliPlus/models/login/captcha_config.dart';
 import 'package:PiliPlus/models/login/model.dart';
 import 'package:PiliPlus/pages/login/geetest/geetest_webview_dialog.dart';
+import 'package:PiliPlus/pages/login/risk_verify_webview.dart';
 import 'package:PiliPlus/utils/accounts.dart';
 import 'package:PiliPlus/utils/accounts/account.dart';
 import 'package:PiliPlus/utils/login_debug.dart';
@@ -288,6 +289,24 @@ class LoginPageController extends GetxController
     SmartDialog.showToast(ok ? '登录诊断日志已复制到剪贴板' : '复制失败，请重试');
   }
 
+  /// 风控 WebView 验证完成后，用 passport 域拿到的 cookie 直接建立账号。
+  Future<void> _saveCookieAccount(Map<String, String> cookies) async {
+    try {
+      SmartDialog.showToast('正在保存身份信息');
+      await LoginAccount(
+        BiliCookieJar.fromJson(cookies),
+        null,
+        null,
+      ).onChange();
+      if (!Accounts.main.isLogin) await switchAccountDialog(Get.context!);
+      SmartDialog.showToast('登录成功');
+      Get.back();
+    } catch (e, s) {
+      loginLog('loginByPassword.riskVerify.saveFailed', '$e\n$s');
+      SmartDialog.showToast('登录失败: $e');
+    }
+  }
+
   // app端密码登录
   Future<void> loginByPassword() async {
     String username = usernameTextController.text;
@@ -354,8 +373,8 @@ class LoginPageController extends GetxController
         } catch (e) {
           loginLog('loginByPassword.riskVerify.parseFailed', '$e');
         }
-        loginLog('loginByPassword.riskVerify.unhandled', <String, dynamic>{
-          'note': '服务端要求身份验证（scene=secLogin），当前未实现该分支',
+        loginLog('loginByPassword.riskVerify.required', <String, dynamic>{
+          'note': '服务端要求身份验证（scene=secLogin），走内嵌 WebView 完成后收 cookie',
           'message': data['message'],
           'url': riskUrl,
           'query': riskQuery,
@@ -365,6 +384,21 @@ class LoginPageController extends GetxController
           'gourl': riskQuery['gourl'],
         });
         await copyLoginLog();
+        if (riskUrl == null || riskUrl.isEmpty) {
+          SmartDialog.showToast('风控验证地址为空，请尝试扫码或 Cookie 登录');
+          return;
+        }
+        final Map<String, String>? cookies =
+            await RiskVerifyWebview.open(riskUrl);
+        loginLog('loginByPassword.riskVerify.result', <String, dynamic>{
+          'cookieNames': cookies?.keys.toList(),
+        });
+        if (cookies == null || cookies['SESSDATA'] == null) {
+          SmartDialog.showToast('未完成身份验证，请尝试扫码或 Cookie 登录');
+          return;
+        }
+        await _saveCookieAccount(cookies);
+        return;
       }
       if (data['status'] == 2) {
         SmartDialog.showToast(data['message']);
