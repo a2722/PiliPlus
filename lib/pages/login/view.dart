@@ -223,7 +223,10 @@ class _LoginPageState extends State<LoginPage> {
     return Column(
       children: [
         const SizedBox(height: 20),
-        const Text('使用账号密码登录'),
+        GestureDetector(
+          onLongPress: () => _loginPageCtr.copyLoginLogToClipboard(),
+          child: const Text('使用账号密码登录'),
+        ),
         const SizedBox(height: 20),
         Padding(
           padding: const .symmetric(horizontal: 20),

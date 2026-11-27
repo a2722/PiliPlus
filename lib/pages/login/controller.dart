@@ -282,6 +282,12 @@ class LoginPageController extends GetxController
     }
   }
 
+  /// 手动把本次会话的登录诊断日志复制到剪贴板（长按"使用账号密码登录"触发）。
+  Future<void> copyLoginLogToClipboard() async {
+    final bool ok = await copyLoginLog();
+    SmartDialog.showToast(ok ? '登录诊断日志已复制到剪贴板' : '复制失败，请重试');
+  }
+
   // app端密码登录
   Future<void> loginByPassword() async {
     String username = usernameTextController.text;
@@ -358,6 +364,7 @@ class LoginPageController extends GetxController
           'hasSource': riskQuery.containsKey('source'),
           'gourl': riskQuery['gourl'],
         });
+        await copyLoginLog();
       }
       if (data['status'] == 2) {
         SmartDialog.showToast(data['message']);
@@ -556,9 +563,10 @@ class LoginPageController extends GetxController
           'msg': res['msg'],
           'data': data,
         });
+        await copyLoginLog();
         SmartDialog.showToast(
           '登录异常，接口未返回身份信息，可能是因为账号风控，请尝试其它登录方式。\n'
-          '（详细响应已写入日志：设置 - 日志）\n${res["msg"]}，\n $data',
+          '（诊断日志已复制到剪贴板，可直接粘贴反馈）\n${res["msg"]}，\n $data',
         );
         return;
       }
