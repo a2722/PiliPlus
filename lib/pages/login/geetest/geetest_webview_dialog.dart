@@ -199,7 +199,9 @@ class _GeetestWebviewDialogState extends State<GeetestWebviewDialog> {
               ..addJavaScriptHandler(
                 handlerName: 'close',
                 callback: (args) => Get.back(),
-              ),
+              );
+          },
+        ),
         Positioned(
           left: 8,
           top: 8,
